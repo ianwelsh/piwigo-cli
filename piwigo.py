@@ -96,6 +96,16 @@ class api:
 
         return response
 
+    def set_image_info(self, id, data={}):
+        data["method"] = "pwg.images.setInfo"
+        data["image_id"] = id
+
+        response = self.client.post(
+            "%s/ws.php?format=json" % self.host, data=data
+        ).json()
+
+        return response
+
     def upload_file(self, filepath, level=8, categories=""):
         form = {
             "method": "pwg.images.upload",
