@@ -1,6 +1,7 @@
 import logging, os, utils
 from functools import partial
 from multiprocessing.pool import Pool
+from datetime import datetime
 
 def upload_file(args, api, dirpath, file):
     if api.image_exists("%s/%s" % (dirpath, file)):
@@ -9,7 +10,14 @@ def upload_file(args, api, dirpath, file):
         if args.dry_run:
             logging.info("Dry run, not uploading %s" % file)
         else:
-            api.upload_file("%s/%s" % (dirpath, file), args.level, args.albums)
+            response = api.upload_file("%s/%s" % (dirpath, file), args.level, args.albums)
+            if response['stat'] == 'ok':
+                mtime = os.path.getmtime("%s/%s" % (dirpath, file))
+                api.set_image_info(response['result']['image_id'], {
+                    'date_creation': datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    'single_value_mode': 'replace',
+                    'multiple_value_mode': 'replace',
+                })
 
 def upload_cmd(api, args):
     for path in args.path:
