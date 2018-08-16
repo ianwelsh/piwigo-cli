@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys, argparse, configparser, logging, multiprocessing.pool
+import os, sys, argparse, configparser, logging, multiprocessing.pool, sys
 import piwigo, commands
 
 
@@ -51,6 +51,8 @@ def main():
         logging.debug("Running upload cmd")
         commands.upload_cmd(api, args)
 
-
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
