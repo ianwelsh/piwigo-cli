@@ -20,7 +20,7 @@ class api:
                 path.insert(0, category["name"])
                 if category["id_uppercat"]:
                     return self.build_album_path(
-                        category["id_uppercat"], categories, path
+                        int(category["id_uppercat"]), categories, path
                     )
 
                 return "/".join(path)
@@ -56,7 +56,7 @@ class api:
             data={"method": "pwg.images.exist", "md5sum_list": md5},
         ).json()
 
-        return True if response["result"][md5] is not None else False
+        return response["result"][md5] if response["result"][md5] else False
 
     def list_images(self, recursive=True, albums=[]):
         params = {
@@ -119,7 +119,15 @@ class api:
         with open(filepath, "rb") as stream:
             response = self.client.post(
                 "%s/ws.php?format=json" % self.host, form, files={"file": stream}
-            ).json()
-            logging.debug(response)
+            )
 
-        return response
+        logging.debug(response.content)
+        try:
+            retval = response.json()
+        except json.decoder.JSONDecodeError:
+            retval = {
+                'stat': 'fail',
+                'message': str(response.content),
+            }
+
+        return retval
