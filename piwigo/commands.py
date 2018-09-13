@@ -1,8 +1,45 @@
-import logging, os, re
+import logging, os, re, requests
 from piwigo import utils
 from functools import partial
 from multiprocessing.pool import Pool
 from datetime import datetime
+
+class Downloader(object):
+    def __init__(self, save_dir):
+        self.save_dir = save_dir
+    def __call__(self, image):
+        if os.path.isfile("{}/{} - {}".format(self.save_dir, image['id'], image['file'])):
+            print("File {} - {} exists. Skipping.".format(image['id'], image['file']))
+            return
+
+        print("Downloading {}".format(image['file']))
+        dl = requests.get(image["element_url"], stream=True)
+        with open(
+            "{}/{} - {}.dl".format(self.save_dir, image["id"], image["file"]), "wb"
+        ) as handle:
+            for data in dl.iter_content(chunk_size=512):
+                handle.write(data)
+            handle.close()
+            dl.close()
+
+        os.rename(
+            "{}/{} - {}.dl".format(self.save_dir, image["id"], image["file"]),
+            "{}/{} - {}".format(self.save_dir, image["id"], image["file"]),
+        )
+
+def download_images_cmd(api, args):
+    images = api.list_images(args.recursive, args.albums)
+    if not os.path.isdir(args.save_dir):
+        os.makedirs(args.save_dir)
+
+    with Pool() as p:
+        p.map(Downloader(args.save_dir), images)
+
+def list_images_cmd(api, args):
+    args.albums = args.albums or ""
+    images = api.list_images(args.recursive, args.albums)
+    for image in images:
+        print(image)
 
 
 def upload_file(args, api, dirpath, file):
@@ -10,17 +47,19 @@ def upload_file(args, api, dirpath, file):
     if re.search("\.json$", file):
         return
 
-    if api.image_exists("%s/%s" % (dirpath, file)):
+    fullpath = "%s/%s" % (dirpath, file)
+
+    if api.image_exists(fullpath):
         logging.info("%s exists, skipping." % file)
+        if args.remove_source_files == True:
+            os.remove(fullpath)
     else:
         if args.dry_run:
             logging.info("Dry run, not uploading %s" % file)
         else:
-            response = api.upload_file(
-                "%s/%s" % (dirpath, file), args.level, args.albums
-            )
+            response = api.upload_file(fullpath, args.level, args.albums)
             if response["stat"] == "ok":
-                mtime = os.path.getmtime("%s/%s" % (dirpath, file))
+                mtime = os.path.getmtime(fullpath)
                 api.set_image_info(
                     response["result"]["image_id"],
                     {
@@ -31,6 +70,8 @@ def upload_file(args, api, dirpath, file):
                         "multiple_value_mode": "replace",
                     },
                 )
+                if args.remove_source_files == True:
+                    os.remove(fullpath)
 
 
 def upload_cmd(api, args):

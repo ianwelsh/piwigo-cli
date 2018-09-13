@@ -65,6 +65,11 @@ Commands
         parser.add_argument("path", nargs="*", help="Username(s)")
         parser.add_argument("-a", "--albums", help="Albums to upload to")
         parser.add_argument("--level", help="Privacy level [default: 8]")
+        parser.add_argument(
+            "--remove-source-files",
+            action="store_true",
+            help="Delete files after they have been uploaded",
+        )
         parser = self.add_global_opts(parser)
         args = parser.parse_args(sys.argv[2:])
 
@@ -83,6 +88,24 @@ Commands
         self.setup(args)
 
         commands.list_albums_cmd(self.api, args)
+
+    def images(self):
+        parser = argparse.ArgumentParser(
+            usage="piwigo images [<args>]", description="Perform actions with images"
+        )
+        parser.add_argument("action", help="Action to perform: list, download")
+        parser.add_argument('-a', '--albums', help="Select images from album(s)")
+        parser.add_argument('--save-dir', help="Specify save directory [default: ./downloads]", default="./downloads")
+        parser.add_argument('-r', '--recursive', action="store_true", help="Include images recursively")
+        parser = self.add_global_opts(parser)
+        args = parser.parse_args(sys.argv[2:])
+
+        self.setup(args)
+
+        if args.action == 'list':
+            commands.list_images_cmd(self.api, args)
+        elif args.action == 'download':
+            commands.download_images_cmd(self.api, args)
 
     def setup(self, args):
         numeric_level = getattr(logging, args.log.upper(), None)

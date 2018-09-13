@@ -63,7 +63,7 @@ class api:
             else False
         )
 
-    def list_images(self, recursive=True, albums=[]):
+    def list_images(self, recursive=True, albums=""):
         params = {
             "method": "pwg.categories.getImages",
             "recursive": recursive,
